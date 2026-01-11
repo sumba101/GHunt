@@ -114,7 +114,7 @@ async def get_reviews(as_client: httpx.AsyncClient, gaia_id: str) -> Tuple[str, 
         
         if locations_data:
             # Save review locations to a file in the current working directory
-            output_file = f"review_locations_{gaia_id}.json"
+            output_file = f"output/review_locations_{gaia_id}.json"
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(locations_data, f, indent=2, ensure_ascii=False)
     
@@ -223,7 +223,7 @@ def output(err: str, stats: Dict[str, int], reviews: List[MapsReview], photos: L
                 nb += 1
 
         if unknown_trads:
-            print(f"\n⚠️ The following gmaps types haven't been found in GHunt\'s knowledge.")
+            print(f"\n The following gmaps types haven't been found in GHunt\'s knowledge.")
             for type in unknown_trads:
                 print(f"- {type}")
             print("Please open an issue on the GHunt Github or submit a PR to add it !")
