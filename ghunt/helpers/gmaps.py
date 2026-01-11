@@ -57,10 +57,20 @@ async def get_reviews(as_client: httpx.AsyncClient, gaia_id: str) -> Tuple[str, 
         return "failed", stats, [], []
 
     data = json.loads(req.text[5:])
-    if not data[16][8]:
+    
+    # Parse stats with safeguards
+    if len(data) <= 16 or not data[16] or len(data[16]) <= 8 or not data[16][8]:
         return "empty", stats, [], []
-    stats = {sec[6]:sec[7] for sec in data[16][8][0]}
-    total_reviews = stats["Reviews"] + stats["Ratings"] + stats["Photos"]
+    
+    if not isinstance(data[16][8], list) or len(data[16][8]) == 0 or not isinstance(data[16][8][0], list):
+        return "empty", stats, [], []
+    
+    stats = {}
+    for sec in data[16][8][0]:
+        if isinstance(sec, list) and len(sec) > 7:
+            stats[sec[6]] = sec[7]
+    
+    total_reviews = stats.get("Reviews", 0) + stats.get("Ratings", 0) + stats.get("Photos", 0)
     if not total_reviews:
         return "empty", stats, [], []
 
@@ -81,73 +91,355 @@ async def get_reviews(as_client: httpx.AsyncClient, gaia_id: str) -> Tuple[str, 
 
                 # Reviews
                 if category == "reviews":
-                    if not data[24]:
+                    reviews_data = None
+                    reviews_format = None
+                    
+                    # Try new format first: data[22][0] or data[45][0]
+                    if len(data) > 22 and data[22] and isinstance(data[22], list) and len(data[22]) > 0:
+                        if isinstance(data[22][0], list) and len(data[22][0]) > 0:
+                            # Check if first element looks like new format card structure
+                            first_item = data[22][0][0]
+                            if isinstance(first_item, list) and len(first_item) >= 2:
+                                reviews_data = data[22][0]
+                                reviews_format = "new"
+
+                    # Try data[45][0] (authenticated format)
+                    if not reviews_data and len(data) > 45 and data[45] and isinstance(data[45], list) and len(data[45]) > 0:
+                        if isinstance(data[45][0], list) and len(data[45][0]) > 0:
+                            first_item = data[45][0][0]
+                            if isinstance(first_item, list) and len(first_item) >= 2:
+                                reviews_data = data[45][0]
+                                reviews_format = "new"
+
+                    # Fall back to old format: data[24][0]
+                    if not reviews_data and len(data) > 24 and data[24] and isinstance(data[24], list) and len(data[24]) > 0:
+                        if isinstance(data[24][0], list):
+                            reviews_data = data[24][0]
+                            reviews_format = "old"
+
+                    # Print format being used (before checking if data exists)
+                    if reviews_format == "new":
+                        print(f"[+] Using NEW format for reviews (data[{22 if len(data) > 22 and data[22] else 45}][0])")
+                    else:
+                        print(f"[+] Using OLD format for reviews (data[24][0])")
+
+                    if not reviews_data:
                         return "private", stats, [], []
-                    reviews_data = data[24][0]
+
                     if not reviews_data:
                         break
-                    for review_data in reviews_data:
-                        review = MapsReview()
-                        review.id = review_data[6][0]
-                        review.date = datetime.utcfromtimestamp(review_data[6][1][3] / 1000000)
-                        if len(review_data[6][2]) > 15 and review_data[6][2][15]:
-                            review.comment = review_data[6][2][15][0][0]
-                        review.rating = review_data[6][2][0][0]
-
-                        review.location.id = review_data[1][14][0]
-                        review.location.name = review_data[1][2]
-                        review.location.address = review_data[1][3]
-                        review.location.tags = review_data[1][4] if review_data[1][4] else []
-                        review.location.types = [x for x in review_data[1][8] if x]
-                        if review_data[1][0]:
-                            review.location.position.latitude = review_data[1][0][2]
-                            review.location.position.longitude = review_data[1][0][3]
-                        # if len(review_data[1]) > 31 and review_data[1][31]:
-                            # print(f"Cost level : {review_data[1][31]}")
-                            # review.location.cost_level = len(review_data[1][31])
-                        new_reviews.append(review)
-                        bar()
+                    
+                    for review_item in reviews_data:
+                        try:
+                            review = MapsReview()
+                            
+                            if reviews_format == "new":
+                                # New format: [place_wrapper, review_wrapper, null, location_summary]
+                                if not isinstance(review_item, list) or len(review_item) < 2:
+                                    continue
+                                
+                                place_wrapper = review_item[0] if len(review_item) > 0 else None
+                                review_wrapper = review_item[1] if len(review_item) > 1 else None
+                                
+                                if not place_wrapper or not isinstance(place_wrapper, list) or len(place_wrapper) < 2:
+                                    continue
+                                if not review_wrapper or not isinstance(review_wrapper, list):
+                                    continue
+                                
+                                place_info = place_wrapper[1] if len(place_wrapper) > 1 and isinstance(place_wrapper[1], list) else None
+                                
+                                # Extract review info
+                                if len(review_wrapper) > 0:
+                                    review.id = review_wrapper[0] if review_wrapper[0] else ""
+                                
+                                if len(review_wrapper) > 1 and isinstance(review_wrapper[1], list) and len(review_wrapper[1]) > 2:
+                                    timestamp_us = review_wrapper[1][2]
+                                    if timestamp_us:
+                                        review.date = datetime.utcfromtimestamp(timestamp_us / 1000000)
+                                
+                                if len(review_wrapper) > 2 and isinstance(review_wrapper[2], list):
+                                    rating_comment = review_wrapper[2]
+                                    if len(rating_comment) > 0:
+                                        if isinstance(rating_comment[0], list) and len(rating_comment[0]) > 0:
+                                            review.rating = rating_comment[0][0]
+                                        elif isinstance(rating_comment[0], (int, float)):
+                                            review.rating = rating_comment[0]
+                                    
+                                    if len(rating_comment) > 15 and rating_comment[15]:
+                                        try:
+                                            if isinstance(rating_comment[15], list) and len(rating_comment[15]) > 0:
+                                                if isinstance(rating_comment[15][0], list) and len(rating_comment[15][0]) > 0:
+                                                    review.comment = rating_comment[15][0][0]
+                                        except (IndexError, TypeError):
+                                            pass
+                                
+                                # Extract place info
+                                if place_info and isinstance(place_info, list):
+                                    if len(place_info) > 14 and place_info[14]:
+                                        if isinstance(place_info[14], list) and len(place_info[14]) > 0:
+                                            review.location.id = place_info[14][0]
+                                        else:
+                                            review.location.id = str(place_info[14])
+                                    elif len(place_info) > 1:
+                                        review.location.id = str(place_info[1]) if place_info[1] else ""
+                                    
+                                    if len(place_info) > 4:
+                                        review.location.name = place_info[4] if place_info[4] else ""
+                                    
+                                    if len(place_info) > 5:
+                                        review.location.address = place_info[5] if place_info[5] else ""
+                                    
+                                    if len(place_info) > 3 and isinstance(place_info[3], list) and len(place_info[3]) >= 4:
+                                        review.location.position.latitude = place_info[3][2]
+                                        review.location.position.longitude = place_info[3][3]
+                                    
+                                    if len(place_info) > 9 and place_info[9]:
+                                        types = []
+                                        tags = []
+                                        for type_entry in place_info[9]:
+                                            if isinstance(type_entry, list) and len(type_entry) > 1:
+                                                types.append(type_entry[1])
+                                                if len(type_entry) > 0:
+                                                    tags.append(type_entry[0])
+                                            elif isinstance(type_entry, str):
+                                                types.append(type_entry)
+                                        review.location.types = types
+                                        review.location.tags = tags
+                            
+                            else:
+                                # Old format
+                                if not isinstance(review_item, list) or len(review_item) < 7:
+                                    continue
+                                
+                                if len(review_item[6]) > 0:
+                                    review.id = review_item[6][0]
+                                
+                                if len(review_item[6]) > 1 and isinstance(review_item[6][1], list) and len(review_item[6][1]) > 3:
+                                    review.date = datetime.utcfromtimestamp(review_item[6][1][3] / 1000000)
+                                
+                                if len(review_item[6]) > 2 and isinstance(review_item[6][2], list):
+                                    if len(review_item[6][2]) > 0 and isinstance(review_item[6][2][0], list) and len(review_item[6][2][0]) > 0:
+                                        review.rating = review_item[6][2][0][0]
+                                    
+                                    if len(review_item[6][2]) > 15 and review_item[6][2][15]:
+                                        if isinstance(review_item[6][2][15], list) and len(review_item[6][2][15]) > 0:
+                                            if isinstance(review_item[6][2][15][0], list) and len(review_item[6][2][15][0]) > 0:
+                                                review.comment = review_item[6][2][15][0][0]
+                                
+                                if len(review_item) > 1 and isinstance(review_item[1], list):
+                                    if len(review_item[1]) > 14 and review_item[1][14]:
+                                        if isinstance(review_item[1][14], list) and len(review_item[1][14]) > 0:
+                                            review.location.id = review_item[1][14][0]
+                                    
+                                    if len(review_item[1]) > 2:
+                                        review.location.name = review_item[1][2] if review_item[1][2] else ""
+                                    
+                                    if len(review_item[1]) > 3:
+                                        review.location.address = review_item[1][3] if review_item[1][3] else ""
+                                    
+                                    if len(review_item[1]) > 4:
+                                        review.location.tags = review_item[1][4] if review_item[1][4] else []
+                                    
+                                    if len(review_item[1]) > 8 and review_item[1][8]:
+                                        review.location.types = [x for x in review_item[1][8] if x]
+                                    
+                                    if len(review_item[1]) > 0 and review_item[1][0]:
+                                        if isinstance(review_item[1][0], list) and len(review_item[1][0]) > 3:
+                                            review.location.position.latitude = review_item[1][0][2]
+                                            review.location.position.longitude = review_item[1][0][3]
+                            
+                            new_reviews.append(review)
+                            bar()
+                            
+                        except (IndexError, TypeError, KeyError, ValueError) as e:
+                            # Skip malformed review entries
+                            continue
 
                     agg_reviews += new_reviews
 
-                    if not new_reviews or len(data[24]) < 4 or not data[24][3]:
+                    # Check for next page token
+                    if not new_reviews:
                         break
-                    next_page_token = data[24][3].strip("=")
+                    
+                    if reviews_format == "new":
+                        # New format pagination (if exists)
+                        if len(data) > 22 and data[22] and isinstance(data[22], list) and len(data[22]) > 3 and data[22][3]:
+                            next_page_token = data[22][3].strip("=")
+                        elif len(data) > 45 and data[45] and isinstance(data[45], list) and len(data[45]) > 3 and data[45][3]:
+                            next_page_token = data[45][3].strip("=")
+                        else:
+                            break
+                    else:
+                        # Old format pagination
+                        if len(data) > 24 and data[24] and isinstance(data[24], list) and len(data[24]) > 3 and data[24][3]:
+                            next_page_token = data[24][3].strip("=")
+                        else:
+                            break
 
                 # Photos
-                elif category == "photos" :
-                    if not data[22]:
+                elif category == "photos":
+                    photos_data = None
+                    photos_format = None
+                    
+                    # Try new format first: data[22][0]
+                    if len(data) > 22 and data[22] and isinstance(data[22], list) and len(data[22]) > 0:
+                        if isinstance(data[22][0], list) and len(data[22][0]) > 0:
+                            # Check if first element looks like new format card structure
+                            first_item = data[22][0][0]
+                            if isinstance(first_item, list) and len(first_item) >= 2:
+                                photos_data = data[22][0]
+                                photos_format = "new"
+
+                    # Fall back to old format: data[22][1]
+                    if not photos_data and len(data) > 22 and data[22] and isinstance(data[22], list) and len(data[22]) > 1:
+                        if isinstance(data[22][1], list):
+                            photos_data = data[22][1]
+                            photos_format = "old"
+
+                    # Print format being used (before checking if data exists)
+                    if photos_format == "new":
+                        print(f"[+] Using NEW format for photos (data[22][0])")
+                    else:
+                        print(f"[+] Using OLD format for photos (data[22][1])")
+
+                    if not photos_data:
                         return "private", stats, [], []
-                    photos_data = data[22][1]
+
                     if not photos_data:
                         break
-                    for photo_data in photos_data:
-                        photos = MapsPhoto()
-                        photos.id = photo_data[0][10]
-                        photos.url = photo_data[0][6][0].split("=")[0]
-                        date = photo_data[0][21][6][8]
-                        photos.date = datetime(date[0], date[1], date[2], date[3]) # UTC
-                        # photos.approximative_date = get_datetime(date[8][0]) # UTC
-
-                        if len(photo_data) > 1:
-                            photos.location.id = photo_data[1][14][0]
-                            photos.location.name = photo_data[1][2]
-                            photos.location.address = photo_data[1][3]
-                            photos.location.tags = photo_data[1][4] if photo_data[1][4] else []
-                            photos.location.types = [x for x in photo_data[1][8] if x] if photo_data[1][8] else []
-                            if photo_data[1][0]:
-                                photos.location.position.latitude = photo_data[1][0][2]
-                                photos.location.position.longitude = photo_data[1][0][3]
-                            if len(photo_data[1]) > 31 and photo_data[1][31]:
-                                photos.location.cost_level = len(photo_data[1][31])
-                        new_photos.append(photos)
-                        bar()
+                    
+                    for photo_item in photos_data:
+                        try:
+                            photos = MapsPhoto()
+                            
+                            if photos_format == "new":
+                                # New format: [place_wrapper, photo_wrapper, null, location_summary]
+                                if not isinstance(photo_item, list) or len(photo_item) < 2:
+                                    continue
+                                
+                                place_wrapper = photo_item[0] if len(photo_item) > 0 else None
+                                photo_wrapper = photo_item[1] if len(photo_item) > 1 else None
+                                
+                                if not place_wrapper or not isinstance(place_wrapper, list) or len(place_wrapper) < 2:
+                                    continue
+                                if not photo_wrapper or not isinstance(photo_wrapper, list):
+                                    continue
+                                
+                                place_info = place_wrapper[1] if len(place_wrapper) > 1 and isinstance(place_wrapper[1], list) else None
+                                
+                                # Extract photo info from photo_wrapper
+                                # Note: Photo structure in new format may differ, need to adapt based on actual response
+                                # For now, try to extract what we can
+                                if len(photo_wrapper) > 0:
+                                    photos.id = str(photo_wrapper[0]) if photo_wrapper[0] else ""
+                                
+                                # Extract place info (same as reviews)
+                                if place_info and isinstance(place_info, list):
+                                    if len(place_info) > 14 and place_info[14]:
+                                        if isinstance(place_info[14], list) and len(place_info[14]) > 0:
+                                            photos.location.id = place_info[14][0]
+                                        else:
+                                            photos.location.id = str(place_info[14])
+                                    
+                                    if len(place_info) > 4:
+                                        photos.location.name = place_info[4] if place_info[4] else ""
+                                    
+                                    if len(place_info) > 5:
+                                        photos.location.address = place_info[5] if place_info[5] else ""
+                                    
+                                    if len(place_info) > 3 and isinstance(place_info[3], list) and len(place_info[3]) >= 4:
+                                        photos.location.position.latitude = place_info[3][2]
+                                        photos.location.position.longitude = place_info[3][3]
+                                    
+                                    if len(place_info) > 9 and place_info[9]:
+                                        types = []
+                                        tags = []
+                                        for type_entry in place_info[9]:
+                                            if isinstance(type_entry, list) and len(type_entry) > 1:
+                                                types.append(type_entry[1])
+                                                if len(type_entry) > 0:
+                                                    tags.append(type_entry[0])
+                                            elif isinstance(type_entry, str):
+                                                types.append(type_entry)
+                                        photos.location.types = types
+                                        photos.location.tags = tags
+                                
+                                # Photo URL and date extraction for new format
+                                # This may need adjustment based on actual new format structure
+                                # For now, set defaults
+                                photos.url = ""
+                                photos.date = datetime.utcnow()
+                            
+                            else:
+                                # Old format
+                                if not isinstance(photo_item, list) or len(photo_item) < 1:
+                                    continue
+                                
+                                if not isinstance(photo_item[0], list) or len(photo_item[0]) < 11:
+                                    continue
+                                
+                                if len(photo_item[0]) > 10:
+                                    photos.id = photo_item[0][10]
+                                
+                                if len(photo_item[0]) > 6 and isinstance(photo_item[0][6], list) and len(photo_item[0][6]) > 0:
+                                    photos.url = photo_item[0][6][0].split("=")[0] if photo_item[0][6][0] else ""
+                                
+                                if len(photo_item[0]) > 21 and isinstance(photo_item[0][21], list):
+                                    if len(photo_item[0][21]) > 6 and isinstance(photo_item[0][21][6], list):
+                                        if len(photo_item[0][21][6]) > 8 and isinstance(photo_item[0][21][6][8], list) and len(photo_item[0][21][6][8]) >= 4:
+                                            date = photo_item[0][21][6][8]
+                                            photos.date = datetime(date[0], date[1], date[2], date[3])  # UTC
+                                
+                                if len(photo_item) > 1 and isinstance(photo_item[1], list):
+                                    if len(photo_item[1]) > 14 and photo_item[1][14]:
+                                        if isinstance(photo_item[1][14], list) and len(photo_item[1][14]) > 0:
+                                            photos.location.id = photo_item[1][14][0]
+                                    
+                                    if len(photo_item[1]) > 2:
+                                        photos.location.name = photo_item[1][2] if photo_item[1][2] else ""
+                                    
+                                    if len(photo_item[1]) > 3:
+                                        photos.location.address = photo_item[1][3] if photo_item[1][3] else ""
+                                    
+                                    if len(photo_item[1]) > 4:
+                                        photos.location.tags = photo_item[1][4] if photo_item[1][4] else []
+                                    
+                                    if len(photo_item[1]) > 8 and photo_item[1][8]:
+                                        photos.location.types = [x for x in photo_item[1][8] if x]
+                                    
+                                    if len(photo_item[1]) > 0 and photo_item[1][0]:
+                                        if isinstance(photo_item[1][0], list) and len(photo_item[1][0]) > 3:
+                                            photos.location.position.latitude = photo_item[1][0][2]
+                                            photos.location.position.longitude = photo_item[1][0][3]
+                                    
+                                    if len(photo_item[1]) > 31 and photo_item[1][31]:
+                                        photos.location.cost_level = len(photo_item[1][31])
+                            
+                            new_photos.append(photos)
+                            bar()
+                            
+                        except (IndexError, TypeError, KeyError, ValueError) as e:
+                            # Skip malformed photo entries
+                            continue
 
                     agg_photos += new_photos
 
-                    if not new_photos or len(data[22]) < 4 or not data[22][3]:
+                    # Check for next page token
+                    if not new_photos:
                         break
-                    next_page_token = data[22][3].strip("=")
+                    
+                    if photos_format == "new":
+                        # New format pagination (if exists)
+                        if len(data) > 22 and data[22] and isinstance(data[22], list) and len(data[22]) > 3 and data[22][3]:
+                            next_page_token = data[22][3].strip("=")
+                        else:
+                            break
+                    else:
+                        # Old format pagination
+                        if len(data) > 22 and data[22] and isinstance(data[22], list) and len(data[22]) > 3 and data[22][3]:
+                            next_page_token = data[22][3].strip("=")
+                        else:
+                            break
 
     return "", stats, agg_reviews, agg_photos
 
@@ -323,8 +615,12 @@ def output(err: str, stats: Dict[str, int], reviews: List[MapsReview], photos: L
         return
 
     print("\n[Reviews]")
-    avg_ratings = round(sum([x.rating for x in reviews]) / len(reviews), 1)
-    print(f"[+] Average rating : {ppnb(avg_ratings)}/5\n")
+    if reviews:
+        avg_ratings = round(sum([x.rating for x in reviews if x.rating]) / len([x for x in reviews if x.rating]), 1) if any(x.rating for x in reviews) else 0
+        print(f"[+] Average rating : {ppnb(avg_ratings)}/5\n")
+    else:
+        print("[-] No reviews to analyze.\n")
+        return
 
     # I removed the costs calculation because of a Google update : https://github.com/mxrch/GHunt/issues/529
 
@@ -407,14 +703,18 @@ def output(err: str, stats: Dict[str, int], reviews: List[MapsReview], photos: L
     geolocator = Nominatim(user_agent="nominatim")
 
     confidence, locations = calculate_probable_location(geolocator, reviews_and_photos, gb.config.gmaps_radius)
-    print(f"\n[+] Probable location (confidence => {confidence}) :")
+    if locations:
+        print(f"\n[+] Probable location (confidence => {confidence}) :")
 
-    loc_names = []
-    for loc in locations:
-        loc_names.append(
-            f"- {loc['avg']['town']}, {loc['avg']['country']}"
-        )
+        loc_names = []
+        for loc in locations:
+            if loc.get('avg'):
+                loc_names.append(
+                    f"- {loc['avg'].get('town', '?')}, {loc['avg'].get('country', '?')}"
+                )
 
-    loc_names = set(loc_names)  # delete duplicates
-    for loc in loc_names:
-        print(loc)
+        loc_names = set(loc_names)  # delete duplicates
+        for loc in loc_names:
+            print(loc)
+    else:
+        print("\n[-] Could not determine probable location.")

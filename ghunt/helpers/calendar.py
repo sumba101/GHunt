@@ -2,6 +2,8 @@ from xmlrpc.client import Boolean
 from dateutil.relativedelta import relativedelta
 from beautifultable import BeautifulTable
 import httpx
+import json
+from pathlib import Path
 
 from typing import *
 from copy import deepcopy
@@ -10,6 +12,7 @@ from ghunt.parsers.calendar import Calendar, CalendarEvents
 from ghunt.objects.base import GHuntCreds
 from ghunt.objects.utils import TMPrinter
 from ghunt.apis.calendar import CalendarHttp
+from ghunt.objects.encoders import GHuntEncoder
 
 
 async def fetch_all(ghunt_creds: GHuntCreds, as_client: httpx.AsyncClient, email_address: str) -> Tuple[Boolean, Calendar, CalendarEvents]:
@@ -33,6 +36,22 @@ def out(calendar: Calendar, events: CalendarEvents, email_address: str, display_
         Output fetched calendar events.
         if limit = 0, = all events are shown
     """
+    ### Save all events to JSON file
+    sanitized_email = email_address.replace("@", "_at_").replace(".", "_")
+    output_file = Path(f"calendar_events_{sanitized_email}.json")
+
+    calendar_data = {
+        "calendar_info": {
+            "id": calendar.id,
+            "summary": calendar.summary,
+            "time_zone": calendar.time_zone
+        },
+        "events_count": len(events.items),
+        "events": [event.__dict__ for event in events.items]
+    }
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(calendar_data, f, cls=GHuntEncoder, indent=2, default=str)
 
     ### Calendar
 
@@ -44,7 +63,7 @@ def out(calendar: Calendar, events: CalendarEvents, email_address: str, display_
     ### Events
     target_events = events.items[-limit:]
     if target_events:
-        print(f"[+] {len(events.items)} event{'s' if len(events.items) > 1 else ''} dumped ! Showing the last {len(target_events)} one{'s' if len(target_events) > 1 else ''}...\n")
+        print(f"[+] {len(events.items)} event{'s' if len(events.items) > 1 else ''} dumped to {output_file} ! Showing the last {len(target_events)} one{'s' if len(target_events) > 1 else ''}...\n")
 
         table = BeautifulTable()
         table.set_style(BeautifulTable.STYLE_GRID)
@@ -70,8 +89,9 @@ def out(calendar: Calendar, events: CalendarEvents, email_address: str, display_
         print(table)
 
         print(f"\n🗃️ Download link :\n=> https://calendar.google.com/calendar/ical/{email_address}/public/basic.ics")
+        print(f"\n📄 Full data saved to: {output_file}")
     else:
-        print("[-] No events dumped.")
+        print(f"[-] No events dumped. (Data saved to {output_file})")
 
     ### Names
 
