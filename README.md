@@ -2,12 +2,7 @@
 
 <br>
 
-#### 🌐 GHunt Online version : https://osint.industries
-#### 🐍 Now Python 3.13 compatible !
-
-<br>
-
-![Python minimum version](https://img.shields.io/badge/Python-3.10%2B-brightgreen)
+This is a fork of GHunt where the Google maps review data extraction has been fixed. It is part of a project for OSINT AI
 
 # 😊 Description
 
@@ -25,11 +20,11 @@ Features :
 - Python >= 3.10
 
 # ⚙️ Installation
-
+Navigate to this folder and then execute the following
 ```bash
 $ pip3 install pipx
 $ pipx ensurepath
-$ pipx install ghunt
+$ pipx install .
 ```
 It will automatically use venvs to avoid dependency conflicts with other projects.
 
@@ -50,6 +45,7 @@ Choice =>
 
 Then, use GHunt Companion to complete the login.
 
+The chrome extension does not work. Use the firefox extension.
 The extension is available on the following stores :\
 \
 [![Firefox](https://files.catbox.moe/5g2ld5.png)](https://addons.mozilla.org/en-US/firefox/addon/ghunt-companion/)&nbsp;&nbsp;&nbsp;[![Chrome](https://developer.chrome.com/static/docs/webstore/branding/image/206x58-chrome-web-bcb82d15b2486.png)](https://chrome.google.com/webstore/detail/ghunt-companion/dpdcofblfbmmnikcbmmiakkclocadjab)
@@ -79,45 +75,4 @@ Options:
 $ ghunt email <email_address> --json user_data.json
 ```
 
-**Have fun 🥰💞**
-
-# 🧑‍💻 Developers
-
-📕 I started writing some docs [here](https://github.com/mxrch/GHunt/wiki) and examples [here](https://github.com/mxrch/GHunt/tree/master/examples), feel free to contribute !
-
-To use GHunt as a lib, you can't use pipx because it uses a venv.\
-So you should install GHunt with pip :
-```bash
-$ pip3 install ghunt
-```
-
-And now, you should be able to `import ghunt` in your projects !\
-You can right now play with the [examples](https://github.com/mxrch/GHunt/tree/master/examples).
-
-# 📮 Details
-
-## Obvious disclaimer
-
-This tool is for educational purposes only, I am not responsible for its use.
-
-## Less obvious disclaimer
-
-This project is under [AGPL Licence](https://choosealicense.com/licenses/agpl-3.0/), and you have to respect it.\
-**Use it only in personal, criminal investigations, pentesting, or open-source projects.**
-
-## Thanks
-
-- [novitae](https://github.com/novitae) for being my Python colleague
-- All the people on [Malfrats Industries](https://discord.gg/sg2YcrC6x9) and elsewhere for the beta test !
-- The HideAndSec team 💗 (blog : https://hideandsec.sh)
-- [Med Amine Jouini](https://dribbble.com/jouiniamine) for his beautiful rework of the Google logo, which I was inspired by *a lot*.
-
-## Sponsors
-
-Thanks to these awesome people for supporting me !
-
-<!-- sponsors --><a href="https://github.com/BlWasp"><img src="https://github.com/BlWasp.png" width="50px" alt="BlWasp" /></a>&nbsp;&nbsp;<a href="https://github.com/gingeleski"><img src="https://github.com/gingeleski.png" width="50px" alt="gingeleski" /></a>&nbsp;&nbsp;<!-- sponsors -->
-
-\
-You like my work ?\
-[Sponsor me](https://github.com/sponsors/mxrch) on GitHub ! 🤗
+Props to the og developers for the repository.
