@@ -108,7 +108,7 @@ def out(calendar: Calendar, events: CalendarEvents, email_address: str, display_
 
     ### Save filtered events to JSON file
     sanitized_email = email_address.replace("@", "_at_").replace(".", "_")
-    output_file = Path(f"calendar_events_{sanitized_email}.json")
+    output_file = Path(f"output/calendar_events_{sanitized_email}.json")
 
     calendar_data = {
         "calendar_info": {
