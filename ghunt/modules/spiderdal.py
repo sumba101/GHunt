@@ -137,7 +137,7 @@ async def main(url: str, package: str, fingerprint: str, strict: bool, json_file
         current_targets = next_sites + next_pkgs
 
     tmprinter.clear()
-    gb.rc.print(f"🕷️ [R{round}]: Investigation done ! {total_scanned} assets scanned.", style="bold magenta")
+    gb.rc.print(f"[R{round}]: Investigation done ! {total_scanned} assets scanned.", style="bold magenta")
 
     # Sort
     pkgs_names = {x:None for x in set([x["asset"].package_name for x in pkgs.values()])}
@@ -150,7 +150,7 @@ async def main(url: str, package: str, fingerprint: str, strict: bool, json_file
 
     # Print results
     if sites:
-        gb.rc.print(f"\n🌐 {len(sites)} site{'s' if len(sites) > 1 else ''} found !", style="white")
+        gb.rc.print(f"\n{len(sites)} site{'s' if len(sites) > 1 else ''} found !", style="white")
         for site_url, site in sites.items():
             if site["first_origin"]:
                 if site["first_origin"].site:
@@ -163,12 +163,12 @@ async def main(url: str, package: str, fingerprint: str, strict: bool, json_file
         gb.rc.print("\nNo sites found.", style="italic bright_black")
 
     if pkgs:
-        gb.rc.print(f"\n📦 {len(pkgs_names)} Android package{'s' if len(pkgs) > 1 else ''} found !", style="white")
+        gb.rc.print(f"\n{len(pkgs_names)} Android package{'s' if len(pkgs) > 1 else ''} found !", style="white")
         for pkg_name, state in pkgs_names.items():
             if state == "public":
-                gb.rc.print(f"- 🏪  {pkg_name}", style="light_steel_blue")
+                gb.rc.print(f"- {pkg_name}", style="light_steel_blue")
             else:
-                gb.rc.print(f"- 🥷 {pkg_name}", style="light_steel_blue")
+                gb.rc.print(f"- {pkg_name}", style="light_steel_blue")
             gb.rc.print("\tFingerprints (SHA256) :", style="steel_blue")
             for pkg in pkgs.values():
                 fingerprints_cache = set()

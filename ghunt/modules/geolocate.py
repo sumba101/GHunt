@@ -43,12 +43,12 @@ async def main(as_client: httpx.AsyncClient, bssid: str, input_file: Path, json_
     raw_address = location.raw['address']
     address = location.address
 
-    gb.rc.print("📍 Location found !\n", style="plum2")
-    gb.rc.print(f"🛣️ [italic]Accuracy : {resp.accuracy} meters[/italic]\n")
+    gb.rc.print("Location found !\n", style="plum2")
+    gb.rc.print(f"[italic]Accuracy : {resp.accuracy} meters[/italic]\n")
     gb.rc.print(f"Latitude : {resp.location.latitude}", style="bold")
     gb.rc.print(f"Longitude : {resp.location.longitude}\n", style="bold")
-    gb.rc.print(f"🏠 Estimated address : {address}\n")
-    gb.rc.print(f"🗺️ [italic][link=https://www.google.com/maps/search/?q={resp.location.latitude},{resp.location.longitude}]Open in Google Maps[/link][/italic]\n", style=f"cornflower_blue")
+    gb.rc.print(f"Estimated address : {address}\n")
+    gb.rc.print(f"[italic][link=https://www.google.com/maps/search/?q={resp.location.latitude},{resp.location.longitude}]Open in Google Maps[/link][/italic]\n", style=f"cornflower_blue")
 
     if json_file:
         from ghunt.objects.encoders import GHuntEncoder;

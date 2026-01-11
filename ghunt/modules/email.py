@@ -45,7 +45,7 @@ async def hunt(as_client: httpx.AsyncClient, email_address: str, json_file: Path
 
     container = "PROFILE"
     
-    gb.rc.print("🙋 Google Account data\n", style="plum2")
+    gb.rc.print("Google Account data\n", style="plum2")
 
     # if container in target.names:
         # print(f"Name : {target.names[container].fullname}\n")
@@ -88,14 +88,14 @@ async def hunt(as_client: httpx.AsyncClient, email_address: str, json_file: Path
             definition = get_user_type_definition(user_type)
             gb.rc.print(f"- {user_type} [italic]({definition})[/italic]")
 
-    gb.rc.print(f"\n📞 Google Chat Extended Data\n", style="light_salmon3")
+    gb.rc.print(f"\nGoogle Chat Extended Data\n", style="light_salmon3")
 
     #print(f"Presence : {target.extendedData.dynamiteData.presence}")
     print(f"Entity Type : {target.extendedData.dynamiteData.entityType}")
     #print(f"DND State : {target.extendedData.dynamiteData.dndState}")
     gb.rc.print(f"Customer ID : {x if (x := target.extendedData.dynamiteData.customerId) else '[italic]Not found.[/italic]'}")
 
-    gb.rc.print(f"\n🌐 Google Plus Extended Data\n", style="cyan")
+    gb.rc.print(f"\nGoogle Plus Extended Data\n", style="cyan")
 
     print(f"Entreprise User : {target.extendedData.gplusData.isEntrepriseUser}")
     #print(f"Content Restriction : {target.extendedData.gplusData.contentRestriction}")
@@ -105,7 +105,7 @@ async def hunt(as_client: httpx.AsyncClient, email_address: str, json_file: Path
         for app in target.inAppReachability[container].apps:
             print(f"- {app}")
 
-    gb.rc.print("\n🎮 Play Games data", style="deep_pink2")
+    gb.rc.print("\nPlay Games data", style="deep_pink2")
 
     player_results = await playgames.search_player(ghunt_creds, as_client, email_address)
     if player_results:
@@ -119,12 +119,12 @@ async def hunt(as_client: httpx.AsyncClient, email_address: str, json_file: Path
     else:
         print("\n[-] No player profile found.")
 
-    gb.rc.print("\n🗺️ Maps data", style="green4")
+    gb.rc.print("\nMaps data", style="green4")
 
     err, stats, reviews, photos = await gmaps.get_reviews(as_client, target.personId)
     gmaps.output(err, stats, reviews, photos, target.personId)
 
-    gb.rc.print("\n🗓️ Calendar data\n", style="slate_blue3")
+    gb.rc.print("\nCalendar data\n", style="slate_blue3")
 
     cal_found, calendar, calendar_events = await gcalendar.fetch_all(ghunt_creds, as_client, email_address)
 

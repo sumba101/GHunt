@@ -71,7 +71,7 @@ async def check_and_login(as_client: httpx.AsyncClient, clean: bool=False) -> No
         print("\n[Connected account]")
         print(f"Name : {owner_name}")
         print(f"Email : {owner_email}")
-        gb.rc.print("\n🔑 [underline]A master token has been generated for your account and saved in the credentials file[/underline], please keep it safe as if it were your password, because it gives access to a lot of Google services, and with that, your personal information.", style="bold")
+        gb.rc.print("\n[underline]A master token has been generated for your account and saved in the credentials file[/underline], please keep it safe as if it were your password, because it gives access to a lot of Google services, and with that, your personal information.", style="bold")
         print(f"Master token services access : {', '.join(services)}")
 
     # Feed the GHuntCreds object

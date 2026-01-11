@@ -12,8 +12,8 @@ def show_banner():
     [/][green]Y88b  d88P [/][blue]888    888[/][green] Y88b 888[/][yellow] 888  888[/][red] Y88b.  
     [/][green] "Y8888P88 [/][blue]888    888[/][green]  "Y88888[/][yellow] 888  888[/][red]  "Y888[/red] v2
 
-             [bold]By: mxrch (🐦 [deep_sky_blue1][link=https://x.com/mxrchreborn]@mxrchreborn[/link][/deep_sky_blue1])
-       [indian_red1]Support my work on GitHub Sponsors ! 💖[/indian_red1][/bold]
+             [bold]By: mxrch ([deep_sky_blue1][link=https://x.com/mxrchreborn]@mxrchreborn[/link][/deep_sky_blue1])
+       [indian_red1]Support my work on GitHub Sponsors ![/indian_red1][/bold]
     """
                                                 
     gb.rc.print(banner)

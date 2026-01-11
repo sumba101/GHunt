@@ -138,10 +138,10 @@ def show_version():
     gb.rc.print(f"> GHunt {current_version.metadata.get('version', '')} ({current_version.metadata.get('name', '')}) <".center(53), style="bold")
     print()
     if new_version:
-        gb.rc.print(f"🥳 New version {new_metadata.get('version', '')} ({new_metadata.get('name', '')}) is available !", style="bold red")
-        gb.rc.print(f"🤗 Run 'pipx upgrade ghunt' to update.", style="bold light_pink3")
+        gb.rc.print(f"New version {new_metadata.get('version', '')} ({new_metadata.get('name', '')}) is available !", style="bold red")
+        gb.rc.print(f"Run 'pipx upgrade ghunt' to update.", style="bold light_pink3")
     else:
-        gb.rc.print("🎉 You are up to date !", style="light_pink3")
+        gb.rc.print("You are up to date !", style="light_pink3")
         
 
 def check_new_version() -> tuple[bool, dict[str, str]]:

@@ -212,7 +212,7 @@ def output(err: str, stats: Dict[str, int], reviews: List[MapsReview], photos: L
             translation = get_gmaps_type_translation(type)
             if not translation:
                 unknown_trads.append(type)
-            gb.rc.print(f"\n🏨 [underline]{translation if translation else type.title()} [{type_count}]", style="bold")
+            gb.rc.print(f"\n[underline]{translation if translation else type.title()} [{type_count}]", style="bold")
             nb = 0
             for tag, tag_count in list(tags_counts.items()):
                 if nb >= 7:

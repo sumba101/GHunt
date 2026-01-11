@@ -27,10 +27,10 @@ async def detect_face(vision_api: VisionHttp, as_client: httpx.AsyncClient, imag
 
     if are_faces_found:
         if len(faces_results.face_annotations) > 1:
-            gb.rc.print(f"🎭 {len(faces_results.face_annotations)} faces detected !", style="italic")
+            gb.rc.print(f"{len(faces_results.face_annotations)} faces detected !", style="italic")
         else:
-            gb.rc.print(f"🎭 [+] Face detected !", style="italic bold")
+            gb.rc.print(f"[+] Face detected !", style="italic bold")
     else:
-        gb.rc.print(f"🎭 No face detected.", style="italic bright_black")
+        gb.rc.print(f"No face detected.", style="italic bright_black")
 
     return faces_results
